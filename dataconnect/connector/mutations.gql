@@ -1,0 +1,875 @@
+# dataconnect/connector/mutations.gql
+# All mutations used by the server models. Matches dataconnect/schema/schema.gql.
+
+# ============ AUTH ============
+
+mutation CreateUser(
+  $email: String!
+  $passwordHash: String!
+  $fullName: String!
+  $phone: String
+  $role: String!
+  $companyId: UUID
+  $employeeRefId: UUID
+) @auth(level: NO_ACCESS) {
+  user_insert(
+    data: {
+      email: $email
+      passwordHash: $passwordHash
+      fullName: $fullName
+      phone: $phone
+      role: $role
+      companyId: $companyId
+      employeeRefId: $employeeRefId
+      isActive: true
+    }
+  )
+}
+
+mutation UpdateUserLastLogin($id: UUID!) @auth(level: NO_ACCESS) {
+  user_update(key: { id: $id }, data: { lastLogin_expr: "request.time" })
+}
+
+mutation SetUserCompanyAndEmployee($id: UUID!, $companyId: UUID, $employeeRefId: UUID) @auth(level: NO_ACCESS) {
+  user_update(key: { id: $id }, data: { companyId: $companyId, employeeRefId: $employeeRefId })
+}
+
+mutation CreateCompany(
+  $name: String!
+  $email: String!
+  $phone: String
+  $website: String
+  $industry: String
+  $size: String
+  $country: String
+  $city: String
+  $description: String
+  $adminId: UUID
+) @auth(level: NO_ACCESS) {
+  company_insert(
+    data: {
+      name: $name
+      email: $email
+      phone: $phone
+      website: $website
+      industry: $industry
+      size: $size
+      country: $country
+      city: $city
+      description: $description
+      adminId: $adminId
+      status: "pending"
+    }
+  )
+}
+
+mutation SetCompanyAdmin($id: UUID!, $adminId: UUID!) @auth(level: NO_ACCESS) {
+  company_update(key: { id: $id }, data: { adminId: $adminId })
+}
+
+mutation UpdateCompanyStatus($id: UUID!, $status: String!, $isVerified: Boolean!) @auth(level: NO_ACCESS) {
+  company_update(key: { id: $id }, data: { status: $status, isVerified: $isVerified })
+}
+
+mutation CreateCompanyMembership(
+  $userId: UUID!
+  $companyId: UUID!
+  $role: String!
+  $invitedBy: UUID
+) @auth(level: NO_ACCESS) {
+  companyMembership_insert(
+    data: {
+      userId: $userId
+      companyId: $companyId
+      role: $role
+      isActive: true
+      invitedBy: { id: $invitedBy }
+    }
+  )
+}
+
+# ============ EMPLOYEE ============
+
+mutation CreateEmployee(
+  $userId: UUID
+  $companyId: UUID!
+  $firstName: String!
+  $lastName: String!
+  $email: String!
+  $phone: String
+  $jobTitle: String!
+  $department: String!
+  $employmentType: String
+  $employmentStatus: String
+  $startDate: Date!
+  $endDate: Date
+  $managerId: UUID
+  $profilePhoto: String
+  $location: String
+) @auth(level: NO_ACCESS) {
+  employee_insert(
+    data: {
+      userId: $userId
+      companyId: $companyId
+      firstName: $firstName
+      lastName: $lastName
+      email: $email
+      phone: $phone
+      jobTitle: $jobTitle
+      department: $department
+      employmentType: $employmentType
+      employmentStatus: $employmentStatus
+      startDate: $startDate
+      endDate: $endDate
+      managerId: $managerId
+      profilePhoto: $profilePhoto
+      location: $location
+    }
+  )
+}
+
+mutation UpdateEmployee(
+  $id: UUID!
+  $firstName: String
+  $lastName: String
+  $phone: String
+  $jobTitle: String
+  $department: String
+  $employmentType: String
+  $employmentStatus: String
+  $startDate: Date
+  $endDate: Date
+  $managerId: UUID
+  $profilePhoto: String
+  $location: String
+) @auth(level: NO_ACCESS) {
+  employee_update(
+    key: { id: $id }
+    data: {
+      firstName: $firstName
+      lastName: $lastName
+      phone: $phone
+      jobTitle: $jobTitle
+      department: $department
+      employmentType: $employmentType
+      employmentStatus: $employmentStatus
+      startDate: $startDate
+      endDate: $endDate
+      managerId: $managerId
+      profilePhoto: $profilePhoto
+      location: $location
+    }
+  )
+}
+
+mutation SoftDeleteEmployee($id: UUID!) @auth(level: NO_ACCESS) {
+  employee_update(key: { id: $id }, data: { deletedAt_expr: "request.time" })
+}
+
+mutation VerifyEmployeeRecord($id: UUID!, $verifiedBy: UUID!) @auth(level: NO_ACCESS) {
+  employee_update(
+    key: { id: $id }
+    data: { isVerified: true, verifiedAt_expr: "request.time", verifiedById: $verifiedBy }
+  )
+}
+
+mutation EndEmployeeEmployment($id: UUID!, $endDate: Date!) @auth(level: NO_ACCESS) {
+  employee_update(
+    key: { id: $id }
+    data: { employmentStatus: "inactive", endDate: $endDate }
+  )
+}
+
+# ============ SKILLS ============
+
+mutation CreateSkill($name: String!, $category: String) @auth(level: NO_ACCESS) {
+  skill_insert(data: { name: $name, category: $category })
+}
+
+mutation AddEmployeeSkill(
+  $employeeId: UUID!
+  $skillId: UUID!
+  $proficiencyLevel: String!
+  $initialLevel: String
+  $yearsExperience: Float
+) @auth(level: NO_ACCESS) {
+  employeeSkill_insert(
+    data: {
+      employeeId: $employeeId
+      skillId: $skillId
+      proficiencyLevel: $proficiencyLevel
+      initialLevel: $initialLevel
+      lastAssessed_expr: "request.time"
+      yearsExperience: $yearsExperience
+    }
+  )
+}
+
+mutation UpdateEmployeeSkill(
+  $employeeId: UUID!
+  $skillId: UUID!
+  $proficiencyLevel: String
+  $initialLevel: String
+  $yearsExperience: Float
+  $isVerified: Boolean
+  $verifiedBy: UUID
+  $verificationDate: Timestamp
+) @auth(level: NO_ACCESS) {
+  employeeSkill_update(
+    key: { employeeId: $employeeId, skillId: $skillId }
+    data: {
+      proficiencyLevel: $proficiencyLevel
+      initialLevel: $initialLevel
+      yearsExperience: $yearsExperience
+      isVerified: $isVerified
+      verifiedBy: $verifiedBy
+      verificationDate: $verificationDate
+      lastAssessed_expr: "request.time"
+    }
+  )
+}
+
+# ============ PROJECTS ============
+
+mutation CreateProject(
+  $employeeId: UUID!
+  $companyId: UUID!
+  $name: String!
+  $description: String
+  $role: String
+  $technologies: String
+  $startDate: Date
+  $endDate: Date
+  $status: String
+  $contributionSummary: String
+  $performanceRating: Float
+) @auth(level: NO_ACCESS) {
+  project_insert(
+    data: {
+      employeeId: $employeeId
+      companyId: $companyId
+      name: $name
+      description: $description
+      role: $role
+      technologies: $technologies
+      startDate: $startDate
+      endDate: $endDate
+      status: $status
+      contributionSummary: $contributionSummary
+      performanceRating: $performanceRating
+    }
+  )
+}
+
+mutation UpdateProject(
+  $id: UUID!
+  $name: String
+  $description: String
+  $role: String
+  $technologies: String
+  $startDate: Date
+  $endDate: Date
+  $status: String
+  $contributionSummary: String
+  $performanceRating: Float
+  $isVerified: Boolean
+  $verifiedBy: UUID
+  $verificationDate: Timestamp
+) @auth(level: NO_ACCESS) {
+  project_update(
+    key: { id: $id }
+    data: {
+      name: $name
+      description: $description
+      role: $role
+      technologies: $technologies
+      startDate: $startDate
+      endDate: $endDate
+      status: $status
+      contributionSummary: $contributionSummary
+      performanceRating: $performanceRating
+      isVerified: $isVerified
+      verifiedById: $verifiedBy
+      verificationDate: $verificationDate
+    }
+  )
+}
+
+# ============ BEHAVIOR RATINGS ============
+
+mutation CreateBehaviorRating(
+  $employeeId: UUID!
+  $companyId: UUID!
+  $category: String!
+  $rating: Int!
+  $reviewerId: UUID!
+  $reviewDate: Date!
+  $comments: String
+) @auth(level: NO_ACCESS) {
+  employeeBehaviorRating_insert(
+    data: {
+      employeeId: $employeeId
+      companyId: $companyId
+      category: $category
+      rating: $rating
+      reviewerId: $reviewerId
+      reviewDate: $reviewDate
+      comments: $comments
+    }
+  )
+}
+
+# ============ ACHIEVEMENTS ============
+
+mutation CreateAchievement(
+  $employeeId: UUID!
+  $companyId: UUID!
+  $title: String!
+  $description: String
+  $date: Date
+  $category: String
+  $evidenceUrl: String
+) @auth(level: NO_ACCESS) {
+  achievement_insert(
+    data: {
+      employeeId: $employeeId
+      companyId: $companyId
+      title: $title
+      description: $description
+      date: $date
+      category: $category
+      evidenceUrl: $evidenceUrl
+    }
+  )
+}
+
+mutation VerifyAchievement($id: UUID!, $verifiedBy: UUID!) @auth(level: NO_ACCESS) {
+  achievement_update(
+    key: { id: $id }
+    data: { isVerified: true, verifiedById: $verifiedBy }
+  )
+}
+
+# ============ PERFORMANCE REVIEWS ============
+
+mutation CreatePerformanceReview(
+  $employeeId: UUID!
+  $companyId: UUID!
+  $reviewerId: UUID!
+  $period: String!
+  $rating: Float!
+  $comments: String
+  $strengths: String
+  $areasForImprovement: String
+  $goalsCompleted: Int
+  $goalsPending: Int
+) @auth(level: NO_ACCESS) {
+  performanceReview_insert(
+    data: {
+      employeeId: $employeeId
+      companyId: $companyId
+      reviewerId: $reviewerId
+      period: $period
+      rating: $rating
+      comments: $comments
+      strengths: $strengths
+      areasForImprovement: $areasForImprovement
+      goalsCompleted: $goalsCompleted
+      goalsPending: $goalsPending
+    }
+  )
+}
+
+# ============ MONTHLY REPORTS ============
+
+mutation CreateMonthlyReport(
+  $employeeId: UUID!
+  $companyId: UUID!
+  $month: String!
+  $year: Int!
+  $performanceScore: Float
+  $behaviorScore: Float
+  $skillsImproved: String
+  $skillsNeedingDevelopment: String
+  $projectsCompleted: Int
+  $projectsInProgress: Int
+  $goalsCompleted: Int
+  $goalsPending: Int
+  $growthPercentage: Float
+  $promotionReadiness: Float
+  $nextRole: String
+  $isAiGenerated: Boolean
+  $reportData: String
+) @auth(level: NO_ACCESS) {
+  monthlyProgressReport_insert(
+    data: {
+      employeeId: $employeeId
+      companyId: $companyId
+      month: $month
+      year: $year
+      performanceScore: $performanceScore
+      behaviorScore: $behaviorScore
+      skillsImproved: $skillsImproved
+      skillsNeedingDevelopment: $skillsNeedingDevelopment
+      projectsCompleted: $projectsCompleted
+      projectsInProgress: $projectsInProgress
+      goalsCompleted: $goalsCompleted
+      goalsPending: $goalsPending
+      growthPercentage: $growthPercentage
+      promotionReadiness: $promotionReadiness
+      nextRole: $nextRole
+      isAiGenerated: $isAiGenerated
+      reportData: $reportData
+    }
+  )
+}
+
+mutation UpdateMonthlyReport(
+  $id: UUID!
+  $performanceScore: Float
+  $behaviorScore: Float
+  $skillsImproved: String
+  $skillsNeedingDevelopment: String
+  $projectsCompleted: Int
+  $projectsInProgress: Int
+  $goalsCompleted: Int
+  $goalsPending: Int
+  $growthPercentage: Float
+  $promotionReadiness: Float
+  $nextRole: String
+  $isAiGenerated: Boolean
+  $reportData: String
+) @auth(level: NO_ACCESS) {
+  monthlyProgressReport_update(
+    key: { id: $id }
+    data: {
+      performanceScore: $performanceScore
+      behaviorScore: $behaviorScore
+      skillsImproved: $skillsImproved
+      skillsNeedingDevelopment: $skillsNeedingDevelopment
+      projectsCompleted: $projectsCompleted
+      projectsInProgress: $projectsInProgress
+      goalsCompleted: $goalsCompleted
+      goalsPending: $goalsPending
+      growthPercentage: $growthPercentage
+      promotionReadiness: $promotionReadiness
+      nextRole: $nextRole
+      isAiGenerated: $isAiGenerated
+      reportData: $reportData
+      generatedDate_expr: "request.time"
+    }
+  )
+}
+
+# ============ PRIVACY SETTINGS ============
+
+mutation CreatePrivacySettings(
+  $employeeId: UUID!
+  $companyId: UUID!
+  $profileVisibility: String
+) @auth(level: NO_ACCESS) {
+  privacySettings_insert(
+    data: { employeeId: $employeeId, companyId: $companyId, profileVisibility: $profileVisibility }
+  )
+}
+
+mutation UpdatePrivacySettings(
+  $privacyId: UUID!
+  $profileVisibility: String
+  $namePublic: Boolean
+  $photoPublic: Boolean
+  $rolePublic: Boolean
+  $skillsPublic: Boolean
+  $skillLevelsPublic: Boolean
+  $skillGrowthPublic: Boolean
+  $projectsPublic: Boolean
+  $projectDescriptionsPublic: Boolean
+  $achievementsPublic: Boolean
+  $experiencePublic: Boolean
+  $performanceSummaryPublic: Boolean
+  $monthlyProgressPublic: Boolean
+  $behaviorSummaryPublic: Boolean
+  $isEmployeeControlled: Boolean
+  $ownershipTransferredAt: Timestamp
+  $publishedAt: Timestamp
+) @auth(level: NO_ACCESS) {
+  privacySettings_update(
+    key: { id: $privacyId }
+    data: {
+      profileVisibility: $profileVisibility
+      namePublic: $namePublic
+      photoPublic: $photoPublic
+      rolePublic: $rolePublic
+      skillsPublic: $skillsPublic
+      skillLevelsPublic: $skillLevelsPublic
+      skillGrowthPublic: $skillGrowthPublic
+      projectsPublic: $projectsPublic
+      projectDescriptionsPublic: $projectDescriptionsPublic
+      achievementsPublic: $achievementsPublic
+      experiencePublic: $experiencePublic
+      performanceSummaryPublic: $performanceSummaryPublic
+      monthlyProgressPublic: $monthlyProgressPublic
+      behaviorSummaryPublic: $behaviorSummaryPublic
+      isEmployeeControlled: $isEmployeeControlled
+      ownershipTransferredAt: $ownershipTransferredAt
+      publishedAt: $publishedAt
+    }
+  )
+}
+
+mutation TransferPrivacyOwnership($privacyId: UUID!) @auth(level: NO_ACCESS) {
+  privacySettings_update(
+    key: { id: $privacyId }
+    data: { isEmployeeControlled: true, ownershipTransferredAt_expr: "request.time" }
+  )
+}
+
+mutation MarkPrivacyPublished($privacyId: UUID!) @auth(level: NO_ACCESS) {
+  privacySettings_update(
+    key: { id: $privacyId }
+    data: { publishedAt_expr: "request.time" }
+  )
+}
+
+# ============ PUBLIC PROFILES ============
+
+mutation CreatePublicProfile(
+  $employeeId: UUID!
+  $companyId: UUID!
+  $slug: String!
+) @auth(level: NO_ACCESS) {
+  publicProfile_insert(
+    data: { employeeId: $employeeId, companyId: $companyId, slug: $slug, isPublic: true }
+  )
+}
+
+mutation UpdatePublicProfileVisibility($profileId: UUID!, $isPublic: Boolean!) @auth(level: NO_ACCESS) {
+  publicProfile_update(key: { id: $profileId }, data: { isPublic: $isPublic })
+}
+
+mutation IncrementPublicProfileViews($profileId: UUID!, $viewCount: Int!) @auth(level: NO_ACCESS) {
+  publicProfile_update(
+    key: { id: $profileId }
+    data: {
+      viewCount: $viewCount
+      lastViewedAt_expr: "request.time"
+    }
+  )
+}
+
+# ============ VERIFICATION CORRECTIONS ============
+
+mutation CreateVerificationCorrection(
+  $employeeId: UUID!
+  $companyId: UUID!
+  $fieldName: String!
+  $oldValue: String
+  $newValue: String
+  $reason: String
+  $requestedBy: UUID
+) @auth(level: NO_ACCESS) {
+  verificationCorrection_insert(
+    data: {
+      employeeId: $employeeId
+      companyId: $companyId
+      fieldName: $fieldName
+      oldValue: $oldValue
+      newValue: $newValue
+      reason: $reason
+      status: "pending"
+      requestedById: $requestedBy
+    }
+  )
+}
+
+mutation UpdateVerificationCorrectionStatus($id: UUID!, $status: String!, $reviewedBy: UUID!) @auth(level: NO_ACCESS) {
+  verificationCorrection_update(
+    key: { id: $id }
+    data: { status: $status, reviewedById: $reviewedBy }
+  )
+}
+
+# ============ JOB OPPORTUNITIES ============
+
+mutation CreateJobOpportunity(
+  $recruiterId: UUID!
+  $employeeId: UUID!
+  $title: String!
+  $companyName: String!
+  $description: String
+  $message: String
+  $salaryRange: String
+  $location: String
+) @auth(level: NO_ACCESS) {
+  jobOpportunity_insert(
+    data: {
+      recruiterId: $recruiterId
+      employeeId: $employeeId
+      title: $title
+      companyName: $companyName
+      description: $description
+      message: $message
+      salaryRange: $salaryRange
+      location: $location
+      status: "sent"
+    }
+  )
+}
+
+mutation UpdateJobOpportunityStatus($id: UUID!, $status: String!, $viewedAt: Timestamp, $respondedAt: Timestamp) @auth(level: NO_ACCESS) {
+  jobOpportunity_update(
+    key: { id: $id }
+    data: { status: $status, viewedAt: $viewedAt, respondedAt: $respondedAt }
+  )
+}
+
+# ============ EMPLOYMENT LINKS ============
+
+mutation CreateEmploymentLink(
+  $personEmail: String!
+  $userId: UUID
+  $employeeId: UUID!
+  $companyId: UUID!
+  $jobTitle: String
+  $department: String
+  $startedAt: Date
+  $source: String
+) @auth(level: NO_ACCESS) {
+  employmentLink_insert(
+    data: {
+      personEmail: $personEmail
+      userId: $userId
+      employeeId: $employeeId
+      companyId: $companyId
+      jobTitle: $jobTitle
+      department: $department
+      startedAt: $startedAt
+      isCurrent: true
+      source: $source
+    }
+  )
+}
+
+mutation MarkEmploymentLinkLeft($linkId: UUID!, $leftAt: Date!) @auth(level: NO_ACCESS) {
+  employmentLink_update(
+    key: { id: $linkId }
+    data: { leftAt: $leftAt, isCurrent: false }
+  )
+}
+
+mutation AttachUserToEmploymentLinks($personEmail: String!, $userId: UUID!) @auth(level: NO_ACCESS) {
+  employmentLink_updateMany(
+    where: { personEmail: { eq: $personEmail } }
+    data: { userId: $userId }
+  )
+}
+
+# ============ NOTIFICATIONS ============
+
+mutation CreateNotification(
+  $userId: UUID!
+  $type: String!
+  $title: String!
+  $message: String!
+  $link: String
+  $metadata: String
+) @auth(level: NO_ACCESS) {
+  notification_insert(
+    data: { userId: $userId, type: $type, title: $title, message: $message, link: $link, metadata: $metadata }
+  )
+}
+
+mutation MarkNotificationRead($id: UUID!) @auth(level: NO_ACCESS) {
+  notification_update(
+    key: { id: $id }
+    data: { isRead: true, readAt_expr: "request.time" }
+  )
+}
+
+mutation MarkAllNotificationsRead($userId: UUID!) @auth(level: NO_ACCESS) {
+  notification_updateMany(
+    where: { userId: { eq: $userId }, isRead: { eq: false } }
+    data: { isRead: true, readAt_expr: "request.time" }
+  )
+}
+
+# ============ AUDIT LOGS ============
+
+mutation CreateAuditLog(
+  $userId: UUID!
+  $role: String!
+  $action: String!
+  $entityType: String
+  $entityId: String
+  $details: String
+  $ipAddress: String
+  $userAgent: String
+) @auth(level: NO_ACCESS) {
+  auditLog_insert(
+    data: {
+      userId: $userId
+      role: $role
+      action: $action
+      entityType: $entityType
+      entityId: $entityId
+      details: $details
+      ipAddress: $ipAddress
+      userAgent: $userAgent
+    }
+  )
+}
+
+# ============ INTERNAL PROJECTS ============
+
+mutation CreateInternalProject(
+  $companyId: UUID!
+  $name: String!
+  $description: String
+  $department: String
+  $clientName: String
+  $startDate: Date
+  $endDate: Date
+  $priority: String
+  $status: String
+  $projectLead: String
+  $requiredRoles: String
+  $openPositions: Int
+  $filledPositions: Int
+  $tasksCompleted: Int
+  $tasksRemaining: Int
+  $progress: Int
+  $assignedRecruiters: String
+  $assignedEmployees: String
+  $documents: String
+  $createdBy: UUID
+) @auth(level: NO_ACCESS) {
+  internalProject_insert(
+    data: {
+      companyId: $companyId
+      name: $name
+      description: $description
+      department: $department
+      clientName: $clientName
+      startDate: $startDate
+      endDate: $endDate
+      priority: $priority
+      status: $status
+      projectLead: $projectLead
+      requiredRoles: $requiredRoles
+      openPositions: $openPositions
+      filledPositions: $filledPositions
+      tasksCompleted: $tasksCompleted
+      tasksRemaining: $tasksRemaining
+      progress: $progress
+      assignedRecruiters: $assignedRecruiters
+      assignedEmployees: $assignedEmployees
+      documents: $documents
+      createdById: $createdBy
+    }
+  )
+}
+
+mutation UpdateInternalProject(
+  $id: UUID!
+  $name: String
+  $description: String
+  $department: String
+  $clientName: String
+  $startDate: Date
+  $endDate: Date
+  $priority: String
+  $status: String
+  $projectLead: String
+  $requiredRoles: String
+  $openPositions: Int
+  $filledPositions: Int
+  $tasksCompleted: Int
+  $tasksRemaining: Int
+  $progress: Int
+  $assignedRecruiters: String
+  $assignedEmployees: String
+  $documents: String
+) @auth(level: NO_ACCESS) {
+  internalProject_update(
+    key: { id: $id }
+    data: {
+      name: $name
+      description: $description
+      department: $department
+      clientName: $clientName
+      startDate: $startDate
+      endDate: $endDate
+      priority: $priority
+      status: $status
+      projectLead: $projectLead
+      requiredRoles: $requiredRoles
+      openPositions: $openPositions
+      filledPositions: $filledPositions
+      tasksCompleted: $tasksCompleted
+      tasksRemaining: $tasksRemaining
+      progress: $progress
+      assignedRecruiters: $assignedRecruiters
+      assignedEmployees: $assignedEmployees
+      documents: $documents
+    }
+  )
+}
+
+mutation SoftDeleteInternalProject($id: UUID!) @auth(level: NO_ACCESS) {
+  internalProject_update(key: { id: $id }, data: { deletedAt_expr: "request.time" })
+}
+
+# ============ INVITATIONS ============
+
+mutation CreateInvitation(
+  $companyId: UUID!
+  $email: String!
+  $tokenHash: String!
+  $firstName: String
+  $lastName: String
+  $jobTitle: String
+  $department: String
+  $invitedBy: UUID!
+  $expiresAt: Timestamp!
+) @auth(level: NO_ACCESS) {
+  employeeInvitation_insert(
+    data: {
+      companyId: $companyId
+      email: $email
+      tokenHash: $tokenHash
+      firstName: $firstName
+      lastName: $lastName
+      jobTitle: $jobTitle
+      department: $department
+      status: "pending"
+      invitedById: $invitedBy
+      expiresAt: $expiresAt
+    }
+  )
+}
+
+mutation MarkInvitationAccepted($id: UUID!) @auth(level: NO_ACCESS) {
+  employeeInvitation_update(
+    key: { id: $id }
+    data: { status: "accepted", acceptedAt_expr: "request.time" }
+  )
+}
+
+# ============ SAVED CANDIDATES ============
+
+mutation SaveCandidate($recruiterId: UUID!, $employeeId: UUID!, $notes: String) @auth(level: NO_ACCESS) {
+  savedCandidate_insert(
+    data: { recruiterId: $recruiterId, employeeId: $employeeId, notes: $notes }
+  )
+}
+
+mutation UpdateSavedCandidateNotes($recruiterId: UUID!, $employeeId: UUID!, $notes: String) @auth(level: NO_ACCESS) {
+  savedCandidate_update(
+    key: { recruiterId: $recruiterId, employeeId: $employeeId }
+    data: { notes: $notes }
+  )
+}
+
+mutation DeleteSavedCandidate($recruiterId: UUID!, $employeeId: UUID!) @auth(level: NO_ACCESS) {
+  savedCandidate_delete(key: { recruiterId: $recruiterId, employeeId: $employeeId })
+}

@@ -1,0 +1,15 @@
+# dataconnect/dataconnect.yaml
+# Verify serviceId/instance match your Firebase console (Data Connect > Service),
+# and set `location` to whatever region your workproof-8634e-instance is in
+# (check the console — commonly us-central1).
+specVersion: "v1"
+serviceId: "workproof-8634e-service"
+location: "us-east4"
+schema:
+  source: "schema"
+  datasource:
+    postgresql:
+      database: "workproof-8634e-instance"
+      cloudSql:
+        instanceId: "workproof-8634e-instance"
+connectorDirs: ["connector"]

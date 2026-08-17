@@ -1,0 +1,375 @@
+# dataconnect/schema/schema.gql
+#
+# Mirrors database/schema.sql. IDs are Data Connect's default UUID primary
+# keys (not the old MySQL auto-increment INTs) — every place in the backend
+# that assumed a numeric id needs to treat it as an opaque string instead.
+#
+# Enum-like columns (role, status, etc.) are kept as plain String, storing the
+# exact same lowercase values the app already uses (e.g. "company_admin",
+# "approved"), so existing comparisons like `role === 'company_admin'` keep
+# working unchanged. JSON columns are stored as String (JSON.stringify'd),
+# same as the app already does for `metadata`/`details`.
+#
+# Deploy with: firebase deploy --only dataconnect
+# This is a live edit against tables that already exist in your project from
+# the console — review the migration plan the CLI prints before confirming.
+
+type User @table {
+  email: String! @unique
+  passwordHash: String!
+  fullName: String!
+  phone: String
+  role: String! # platform_admin | company_admin | employee | recruiter
+  company: Company @ref
+  employeeRef: Employee @ref
+  isActive: Boolean! @default(value: true)
+  lastLogin: Timestamp
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp
+  deletedAt: Timestamp
+}
+
+type Company @table {
+  name: String!
+  email: String! @unique
+  phone: String
+  website: String
+  industry: String
+  size: String
+  country: String
+  city: String
+  description: String
+  logoUrl: String
+  status: String! @default(value: "pending") # pending | approved | rejected | suspended
+  admin: User @ref
+  verificationDate: Timestamp
+  isVerified: Boolean! @default(value: false)
+  subscriptionTier: String! @default(value: "free")
+  employeeLimit: Int! @default(value: 10)
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp
+  deletedAt: Timestamp
+}
+
+type CompanyMembership @table(key: ["user", "company"]) {
+  user: User!
+  company: Company!
+  role: String! @default(value: "employee") # admin | manager | employee | viewer
+  isActive: Boolean! @default(value: true)
+  invitedBy: User @ref
+  joinedAt: Timestamp! @default(expr: "request.time")
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp
+}
+
+type Employee @table {
+  user: User @ref
+  company: Company!
+  firstName: String!
+  lastName: String!
+  email: String! @unique
+  phone: String
+  jobTitle: String!
+  department: String!
+  employmentType: String! @default(value: "full_time")
+  employmentStatus: String! @default(value: "active")
+  startDate: Date!
+  endDate: Date
+  manager: Employee @ref
+  profilePhoto: String
+  location: String
+  isVerified: Boolean! @default(value: false)
+  verifiedAt: Timestamp
+  verifiedBy: User @ref
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp
+  deletedAt: Timestamp
+  privacySettings: PrivacySettings @ref
+}
+
+type EmployeeInvitation @table {
+  company: Company!
+  email: String!
+  tokenHash: String! @unique
+  firstName: String
+  lastName: String
+  jobTitle: String
+  department: String
+  status: String! @default(value: "pending") # pending | accepted | expired | cancelled
+  invitedBy: User!
+  expiresAt: Timestamp!
+  acceptedAt: Timestamp
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp
+}
+
+type Skill @table {
+  name: String! @unique
+  category: String
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type EmployeeSkill @table(key: ["employeeId", "skillId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  employeeId: UUID!
+  skillId: UUID!
+  proficiencyLevel: String!
+  initialLevel: String
+  isVerified: Boolean! @default(value: false)
+  verifiedBy: UUID
+  verificationDate: Timestamp
+  lastAssessed: Date
+  yearsExperience: Float
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp
+}
+
+type Project @table {
+  employee: Employee!
+  company: Company!
+  name: String!
+  description: String
+  role: String
+  technologies: String
+  startDate: Date
+  endDate: Date
+  status: String! @default(value: "in_progress") # completed | in_progress | planned
+  contributionSummary: String
+  performanceRating: Float
+  isVerified: Boolean! @default(value: false)
+  verifiedBy: User @ref
+  verificationDate: Timestamp
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp
+}
+
+type EmployeeBehaviorRating @table {
+  employee: Employee!
+  company: Company!
+  category: String! # collaboration | communication | reliability | leadership | problem_solving | adaptability | professional_growth
+  rating: Int!
+  reviewer: User!
+  reviewDate: Date!
+  comments: String
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp
+}
+
+type Achievement @table {
+  employee: Employee!
+  company: Company!
+  title: String!
+  description: String
+  date: Date
+  category: String! @default(value: "other") # certification | award | publication | other
+  evidenceUrl: String
+  isVerified: Boolean! @default(value: false)
+  verifiedBy: User @ref
+  verificationDate: Timestamp
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp
+}
+
+type PerformanceReview @table {
+  employee: Employee!
+  company: Company!
+  reviewer: User!
+  period: String!
+  rating: Float!
+  comments: String
+  strengths: String
+  areasForImprovement: String
+  goalsCompleted: Int! @default(value: 0)
+  goalsPending: Int! @default(value: 0)
+  reviewDate: Timestamp! @default(expr: "request.time")
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp
+}
+
+type MonthlyProgressReport @table {
+  employee: Employee!
+  company: Company!
+  month: String!
+  year: Int!
+  performanceScore: Float! @default(value: 0)
+  behaviorScore: Float! @default(value: 0)
+  skillsImproved: String
+  skillsNeedingDevelopment: String
+  projectsCompleted: Int! @default(value: 0)
+  projectsInProgress: Int! @default(value: 0)
+  achievements: String
+  managerFeedback: String
+  employeeResponse: String
+  goalsCompleted: Int! @default(value: 0)
+  goalsPending: Int! @default(value: 0)
+  growthPercentage: Float! @default(value: 0)
+  promotionReadiness: Float! @default(value: 0)
+  nextRole: String
+  isAiGenerated: Boolean! @default(value: false)
+  reportData: String
+  generatedDate: Timestamp! @default(expr: "request.time")
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp
+}
+
+type PrivacySettings @table {
+  employee: Employee! @unique
+  company: Company!
+  profileVisibility: String! @default(value: "private") # private | public | limited
+  namePublic: Boolean! @default(value: false)
+  photoPublic: Boolean! @default(value: false)
+  rolePublic: Boolean! @default(value: false)
+  skillsPublic: Boolean! @default(value: false)
+  skillLevelsPublic: Boolean! @default(value: false)
+  skillGrowthPublic: Boolean! @default(value: false)
+  projectsPublic: Boolean! @default(value: false)
+  projectDescriptionsPublic: Boolean! @default(value: false)
+  achievementsPublic: Boolean! @default(value: false)
+  experiencePublic: Boolean! @default(value: false)
+  performanceSummaryPublic: Boolean! @default(value: false)
+  monthlyProgressPublic: Boolean! @default(value: false)
+  behaviorSummaryPublic: Boolean! @default(value: false)
+  isEmployeeControlled: Boolean! @default(value: false)
+  ownershipTransferredAt: Timestamp
+  publishedAt: Timestamp
+  lastModifiedAt: Timestamp
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp
+}
+
+type PublicProfile @table {
+  employee: Employee! @unique
+  company: Company!
+  slug: String! @unique
+  isPublic: Boolean! @default(value: false)
+  viewCount: Int! @default(value: 0)
+  lastViewedAt: Timestamp
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp
+}
+
+type VerificationCorrection @table {
+  employee: Employee!
+  company: Company!
+  fieldName: String!
+  oldValue: String
+  newValue: String
+  reason: String
+  status: String! @default(value: "pending") # pending | approved | rejected
+  requestedBy: User @ref
+  reviewedBy: User @ref
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp
+}
+
+type SavedCandidate @table(key: ["recruiter", "employee"]) {
+  recruiter: User!
+  employee: Employee!
+  notes: String
+  savedAt: Timestamp! @default(expr: "request.time")
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type JobOpportunity @table {
+  recruiter: User!
+  employee: Employee!
+  title: String!
+  companyName: String!
+  description: String
+  status: String! @default(value: "sent") # sent | viewed | interested | declined | interview | hired
+  message: String
+  salaryRange: String
+  location: String
+  sentAt: Timestamp! @default(expr: "request.time")
+  viewedAt: Timestamp
+  respondedAt: Timestamp
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp
+}
+
+type Notification @table {
+  user: User!
+  type: String!
+  title: String!
+  message: String!
+  isRead: Boolean! @default(value: false)
+  link: String
+  metadata: String
+  readAt: Timestamp
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type AuditLog @table {
+  user: User!
+  role: String!
+  action: String!
+  entityType: String
+  entityId: String
+  details: String
+  ipAddress: String
+  userAgent: String
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type SubscriptionPlan @table {
+  code: String! @unique # free | professional | enterprise
+  name: String!
+  priceMonthly: Float! @default(value: 0)
+  employeeLimit: Int! @default(value: 10)
+  features: String
+  isActive: Boolean! @default(value: true)
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type CompanySubscription @table {
+  company: Company!
+  plan: SubscriptionPlan!
+  status: String! @default(value: "active") # active | past_due | canceled | trialing
+  startedAt: Timestamp! @default(expr: "request.time")
+  currentPeriodEnd: Timestamp
+  externalCustomerId: String
+  externalSubscriptionId: String
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp
+}
+
+type InternalProject @table {
+  company: Company!
+  name: String!
+  description: String
+  department: String
+  clientName: String
+  startDate: Date
+  endDate: Date
+  priority: String! @default(value: "medium") # low | medium | high
+  status: String! @default(value: "not_started")
+  projectLead: String
+  requiredRoles: String
+  openPositions: Int! @default(value: 0)
+  filledPositions: Int! @default(value: 0)
+  tasksCompleted: Int! @default(value: 0)
+  tasksRemaining: Int! @default(value: 0)
+  progress: Int! @default(value: 0)
+  assignedRecruiters: String
+  assignedEmployees: String
+  documents: String
+  createdBy: User @ref
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp
+  deletedAt: Timestamp
+}
+
+type EmploymentLink @table {
+  personEmail: String!
+  user: User @ref
+  employee: Employee! @unique
+  company: Company!
+  jobTitle: String
+  department: String
+  startedAt: Date
+  leftAt: Date
+  isCurrent: Boolean! @default(value: true)
+  source: String! @default(value: "backfill") # invitation | direct_add | rehire | backfill
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp
+}

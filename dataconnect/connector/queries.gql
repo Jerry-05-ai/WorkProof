@@ -1,0 +1,1121 @@
+# dataconnect/connector/queries.gql
+# All queries used by the server models. Matches dataconnect/schema/schema.gql.
+
+# ============ AUTH ============
+
+query GetUserByEmail($email: String!) @auth(level: NO_ACCESS) {
+  users(where: { email: { eq: $email }, deletedAt: { isNull: true } }, limit: 1) {
+    id
+    email
+    passwordHash
+    fullName
+    phone
+    role
+    isActive
+    lastLogin
+    createdAt
+    updatedAt
+    company {
+      id
+    }
+    employeeRef {
+      id
+    }
+  }
+}
+
+query GetUserById($id: UUID!) @auth(level: NO_ACCESS) {
+  user(id: $id) {
+    id
+    email
+    passwordHash
+    fullName
+    phone
+    role
+    isActive
+    lastLogin
+    createdAt
+    updatedAt
+    company {
+      id
+    }
+    employeeRef {
+      id
+    }
+  }
+}
+
+query GetCompanyById($id: UUID!) @auth(level: NO_ACCESS) {
+  company(id: $id) {
+    id
+    name
+    email
+    phone
+    website
+    industry
+    size
+    country
+    city
+    description
+    status
+    isVerified
+    deletedAt
+    admin {
+      id
+    }
+  }
+}
+
+query GetCompanyByName($name: String!) @auth(level: NO_ACCESS) {
+  companies(where: { name: { eq: $name }, deletedAt: { isNull: true } }, limit: 1) {
+    id
+    name
+  }
+}
+
+query GetCompanyByEmail($email: String!) @auth(level: NO_ACCESS) {
+  companies(where: { email: { eq: $email }, deletedAt: { isNull: true } }, limit: 1) {
+    id
+    email
+  }
+}
+
+# ============ EMPLOYEE ============
+
+query GetEmployeeById($id: UUID!) @auth(level: NO_ACCESS) {
+  employee(id: $id) {
+    id
+    userId
+    companyId
+    firstName
+    lastName
+    email
+    phone
+    jobTitle
+    department
+    employmentType
+    employmentStatus
+    startDate
+    endDate
+    managerId
+    profilePhoto
+    location
+    isVerified
+    verifiedAt
+    verifiedById
+    createdAt
+    updatedAt
+    deletedAt
+    user {
+      id
+    }
+    company {
+      id
+      name
+    }
+    manager {
+      id
+    }
+  }
+}
+
+query GetEmployeeByEmail($email: String!) @auth(level: NO_ACCESS) {
+  employees(where: { email: { eq: $email }, deletedAt: { isNull: true } }, limit: 1) {
+    id
+    userId
+    companyId
+    firstName
+    lastName
+    email
+    phone
+    jobTitle
+    department
+    employmentType
+    employmentStatus
+    startDate
+    endDate
+    managerId
+    profilePhoto
+    location
+    isVerified
+    verifiedAt
+    verifiedById
+    createdAt
+    updatedAt
+    deletedAt
+    user {
+      id
+    }
+  }
+}
+
+query ListEmployeesByCompany(
+  $companyId: UUID!
+  $search: String
+  $department: String
+  $employmentStatus: String
+  $isVerified: Boolean
+  $limit: Int
+  $offset: Int
+) @auth(level: NO_ACCESS) {
+  employees(
+    where: {
+      _and: [
+        { companyId: { eq: $companyId } }
+        { deletedAt: { isNull: true } }
+        { department: { eq: $department } }
+        { employmentStatus: { eq: $employmentStatus } }
+        { isVerified: { eq: $isVerified } }
+        {
+          _and: [
+            {
+              _or: [
+                { firstName: { contains: $search } }
+                { lastName: { contains: $search } }
+                { email: { contains: $search } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+    orderBy: { createdAt: DESC }
+    limit: $limit
+    offset: $offset
+  ) {
+    id
+    userId
+    companyId
+    firstName
+    lastName
+    email
+    phone
+    jobTitle
+    department
+    employmentType
+    employmentStatus
+    startDate
+    endDate
+    managerId
+    profilePhoto
+    location
+    isVerified
+    verifiedAt
+    verifiedById
+    createdAt
+    updatedAt
+    deletedAt
+  }
+}
+
+query SearchEmployees($companyId: UUID!, $search: String!) @auth(level: NO_ACCESS) {
+  employees(
+    where: {
+      _and: [
+        { companyId: { eq: $companyId } }
+        {
+          _and: [
+            {
+              _or: [
+                { firstName: { contains: $search } }
+                { lastName: { contains: $search } }
+                { email: { contains: $search } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+    limit: 10
+  ) {
+    id
+    email
+    firstName
+    lastName
+  }
+}
+
+# ============ SKILLS ============
+
+query GetSkillByName($name: String!) @auth(level: NO_ACCESS) {
+  skills(where: { name: { eq: $name } }, limit: 1) {
+    id
+    name
+    category
+  }
+}
+
+query ListSkillsByEmployee($employeeId: UUID!) @auth(level: NO_ACCESS) {
+  employeeSkills(where: { employeeId: { eq: $employeeId } }, orderBy: { createdAt: ASC }) {
+    id
+    employeeId
+    skillId
+    proficiencyLevel
+    initialLevel
+    isVerified
+    verifiedBy
+    verificationDate
+    lastAssessed
+    yearsExperience
+    createdAt
+    updatedAt
+  }
+}
+
+query GetEmployeeSkillByPair($employeeId: UUID!, $skillId: UUID!) @auth(level: NO_ACCESS) {
+  employeeSkills(where: { employeeId: { eq: $employeeId }, skillId: { eq: $skillId } }, limit: 1) {
+    id
+  }
+}
+
+# ============ PROJECTS ============
+
+query ListProjectsByEmployee($employeeId: UUID!, $companyId: UUID!) @auth(level: NO_ACCESS) {
+  projects(
+    where: { employeeId: { eq: $employeeId }, companyId: { eq: $companyId } }
+    orderBy: { createdAt: DESC }
+  ) {
+    id
+    employeeId
+    companyId
+    name
+    description
+    role
+    technologies
+    startDate
+    endDate
+    status
+    contributionSummary
+    performanceRating
+    isVerified
+    verifiedById
+    verificationDate
+    createdAt
+    updatedAt
+  }
+}
+
+query ListProjectsByCompany($companyId: UUID!) @auth(level: NO_ACCESS) {
+  projects(where: { companyId: { eq: $companyId } }, orderBy: { createdAt: DESC }) {
+    id
+    employeeId
+    companyId
+    name
+    status
+    performanceRating
+    isVerified
+    createdAt
+  }
+}
+
+# ============ BEHAVIOR RATINGS ============
+
+query ListBehaviorRatings($employeeId: UUID!, $companyId: UUID!) @auth(level: NO_ACCESS) {
+  employeeBehaviorRatings(
+    where: { employeeId: { eq: $employeeId }, companyId: { eq: $companyId } }
+    orderBy: [{ reviewDate: DESC }, { id: DESC }]
+  ) {
+    id
+    employeeId
+    companyId
+    category
+    rating
+    reviewerId
+    reviewDate
+    comments
+    createdAt
+  }
+}
+
+query LatestBehaviorRatings($employeeId: UUID!, $companyId: UUID!) @auth(level: NO_ACCESS) {
+  employeeBehaviorRatings(
+    where: { employeeId: { eq: $employeeId }, companyId: { eq: $companyId } }
+    orderBy: [{ reviewDate: DESC }, { id: DESC }]
+  ) {
+    id
+    category
+    rating
+    reviewDate
+  }
+}
+
+# ============ ACHIEVEMENTS ============
+
+query ListAchievements($employeeId: UUID!, $companyId: UUID!) @auth(level: NO_ACCESS) {
+  achievements(
+    where: { employeeId: { eq: $employeeId }, companyId: { eq: $companyId } }
+    orderBy: { createdAt: DESC }
+  ) {
+    id
+    employeeId
+    companyId
+    title
+    description
+    date
+    category
+    evidenceUrl
+    isVerified
+    verifiedById
+    verificationDate
+    createdAt
+    updatedAt
+  }
+}
+
+# ============ PERFORMANCE REVIEWS ============
+
+query ListPerformanceReviews($employeeId: UUID!, $companyId: UUID!) @auth(level: NO_ACCESS) {
+  performanceReviews(
+    where: { employeeId: { eq: $employeeId }, companyId: { eq: $companyId } }
+    orderBy: { reviewDate: DESC }
+  ) {
+    id
+    employeeId
+    companyId
+    reviewerId
+    period
+    rating
+    comments
+    strengths
+    areasForImprovement
+    goalsCompleted
+    goalsPending
+    reviewDate
+    createdAt
+    reviewer {
+      id
+      fullName
+      email
+    }
+  }
+}
+
+query GetLatestPerformanceReview($employeeId: UUID!, $companyId: UUID!) @auth(level: NO_ACCESS) {
+  performanceReviews(
+    where: { employeeId: { eq: $employeeId }, companyId: { eq: $companyId } }
+    orderBy: { reviewDate: DESC }
+    limit: 1
+  ) {
+    id
+    rating
+    reviewDate
+  }
+}
+
+# ============ MONTHLY REPORTS ============
+
+query ListMonthlyReports($employeeId: UUID!, $companyId: UUID!) @auth(level: NO_ACCESS) {
+  monthlyProgressReports(
+    where: { employeeId: { eq: $employeeId }, companyId: { eq: $companyId } }
+    orderBy: [{ year: DESC }, { month: DESC }]
+  ) {
+    id
+    employeeId
+    companyId
+    month
+    year
+    performanceScore
+    behaviorScore
+    skillsImproved
+    skillsNeedingDevelopment
+    projectsCompleted
+    projectsInProgress
+    achievements
+    managerFeedback
+    employeeResponse
+    goalsCompleted
+    goalsPending
+    growthPercentage
+    promotionReadiness
+    nextRole
+    isAiGenerated
+    reportData
+    generatedDate
+    createdAt
+  }
+}
+
+query GetMonthlyReportByKey($employeeId: UUID!, $companyId: UUID!, $month: String!, $year: Int!) @auth(level: NO_ACCESS) {
+  monthlyProgressReports(
+    where: {
+      employeeId: { eq: $employeeId }
+      companyId: { eq: $companyId }
+      month: { eq: $month }
+      year: { eq: $year }
+    }
+    limit: 1
+  ) {
+    id
+    employeeId
+    companyId
+    month
+    year
+    performanceScore
+    behaviorScore
+    projectsCompleted
+    projectsInProgress
+    growthPercentage
+    promotionReadiness
+    nextRole
+    isAiGenerated
+    reportData
+    generatedDate
+  }
+}
+
+# ============ PRIVACY SETTINGS ============
+
+query GetPrivacyByEmployee($employeeId: UUID!) @auth(level: NO_ACCESS) {
+  employee(id: $employeeId) {
+    privacySettings {
+      id
+      employee { id }
+      company { id }
+      profileVisibility
+      namePublic
+      photoPublic
+      rolePublic
+      skillsPublic
+      skillLevelsPublic
+      skillGrowthPublic
+      projectsPublic
+      projectDescriptionsPublic
+      achievementsPublic
+      experiencePublic
+      performanceSummaryPublic
+      monthlyProgressPublic
+      behaviorSummaryPublic
+      isEmployeeControlled
+      ownershipTransferredAt
+      publishedAt
+      lastModifiedAt
+      createdAt
+      updatedAt
+    }
+  }
+}
+
+query GetEmployeeEmploymentStatus($employeeId: UUID!) @auth(level: NO_ACCESS) {
+  employee(id: $employeeId) {
+    id
+    employmentStatus
+  }
+}
+
+# ============ PUBLIC PROFILES ============
+
+query GetPublicProfileByEmployee($employeeId: UUID!) @auth(level: NO_ACCESS) {
+  publicProfiles(where: { employeeId: { eq: $employeeId } }, limit: 1) {
+    id
+    employeeId
+    companyId
+    slug
+    isPublic
+    viewCount
+    lastViewedAt
+    createdAt
+  }
+}
+
+query GetPublicProfileBySlug($slug: String!) @auth(level: NO_ACCESS) {
+  publicProfiles(where: { slug: { eq: $slug } }, limit: 1) {
+    id
+    employeeId
+    companyId
+    slug
+    isPublic
+    viewCount
+    lastViewedAt
+    createdAt
+  }
+}
+
+query CheckSlugExists($slug: String!) @auth(level: NO_ACCESS) {
+  publicProfiles(where: { slug: { eq: $slug } }, limit: 1) {
+    id
+  }
+}
+
+query ListPublicProfiles @auth(level: NO_ACCESS) {
+  publicProfiles(where: { isPublic: { eq: true } }) {
+    id
+    employeeId
+    companyId
+    slug
+    isPublic
+    viewCount
+    lastViewedAt
+    employee {
+      id
+      userId
+      companyId
+      firstName
+      lastName
+      email
+      phone
+      jobTitle
+      department
+      employmentType
+      employmentStatus
+      startDate
+      endDate
+      managerId
+      profilePhoto
+      location
+      isVerified
+      verifiedAt
+      verifiedById
+      createdAt
+      updatedAt
+      deletedAt
+    }
+  }
+}
+
+# ============ VERIFICATION CORRECTIONS ============
+
+query GetVerificationCorrectionById($id: UUID!) @auth(level: NO_ACCESS) {
+  verificationCorrection(id: $id) {
+    id
+    employeeId
+    companyId
+    fieldName
+    oldValue
+    newValue
+    reason
+    status
+    requestedById
+    reviewedById
+    createdAt
+    updatedAt
+  }
+}
+
+query ListVerificationCorrectionsByEmployee($employeeId: UUID!, $status: String) @auth(level: NO_ACCESS) {
+  verificationCorrections(
+    where: { employeeId: { eq: $employeeId }, status: { eq: $status } }
+    orderBy: { createdAt: DESC }
+  ) {
+    id
+    employeeId
+    companyId
+    fieldName
+    oldValue
+    newValue
+    reason
+    status
+    requestedById
+    reviewedById
+    createdAt
+  }
+}
+
+query ListVerificationCorrectionsByCompany($companyId: UUID!, $status: String) @auth(level: NO_ACCESS) {
+  verificationCorrections(
+    where: { companyId: { eq: $companyId }, status: { eq: $status } }
+    orderBy: { createdAt: DESC }
+  ) {
+    id
+    employeeId
+    companyId
+    fieldName
+    oldValue
+    newValue
+    reason
+    status
+    requestedById
+    reviewedById
+    createdAt
+  }
+}
+
+# ============ JOB OPPORTUNITIES ============
+
+query GetJobOpportunityById($id: UUID!) @auth(level: NO_ACCESS) {
+  jobOpportunity(id: $id) {
+    id
+    recruiterId
+    employeeId
+    title
+    companyName
+    description
+    status
+    message
+    salaryRange
+    location
+    sentAt
+    viewedAt
+    respondedAt
+    createdAt
+    employee {
+      id
+      firstName
+      lastName
+      jobTitle
+    }
+    recruiter {
+      id
+      fullName
+      email
+    }
+  }
+}
+
+query ListJobOpportunitiesByRecruiter($recruiterId: UUID!) @auth(level: NO_ACCESS) {
+  jobOpportunities(
+    where: { recruiterId: { eq: $recruiterId } }
+    orderBy: { createdAt: DESC }
+  ) {
+    id
+    recruiterId
+    employeeId
+    title
+    companyName
+    description
+    status
+    message
+    salaryRange
+    location
+    sentAt
+    viewedAt
+    respondedAt
+    createdAt
+    employee {
+      id
+      firstName
+      lastName
+      jobTitle
+    }
+  }
+}
+
+query ListJobOpportunitiesByEmployee($employeeId: UUID!) @auth(level: NO_ACCESS) {
+  jobOpportunities(
+    where: { employeeId: { eq: $employeeId } }
+    orderBy: { createdAt: DESC }
+  ) {
+    id
+    recruiterId
+    employeeId
+    title
+    companyName
+    description
+    status
+    message
+    salaryRange
+    location
+    sentAt
+    viewedAt
+    respondedAt
+    createdAt
+    recruiter {
+      id
+      fullName
+    }
+  }
+}
+
+query CountJobOpportunitiesByStatus($recruiterId: UUID!) @auth(level: NO_ACCESS) {
+  jobOpportunities(where: { recruiterId: { eq: $recruiterId } }) {
+    id
+    status
+  }
+}
+
+# ============ EMPLOYMENT LINKS ============
+
+query ListEmploymentLinksByPerson($personEmail: String!) @auth(level: NO_ACCESS) {
+  employmentLinks(
+    where: { personEmail: { eq: $personEmail } }
+    orderBy: [{ isCurrent: DESC }, { startedAt: DESC }, { id: DESC }]
+  ) {
+    id
+    personEmail
+    userId
+    employeeId
+    companyId
+    jobTitle
+    department
+    startedAt
+    leftAt
+    isCurrent
+    source
+    createdAt
+    company {
+      id
+      name
+    }
+  }
+}
+
+query GetEmploymentLinkByEmployee($employeeId: UUID!) @auth(level: NO_ACCESS) {
+  employmentLinks(where: { employeeId: { eq: $employeeId } }, limit: 1) {
+    id
+    personEmail
+    userId
+    employeeId
+    companyId
+    jobTitle
+    department
+    startedAt
+    leftAt
+    isCurrent
+    source
+    createdAt
+  }
+}
+
+query GetCurrentEmploymentLink($personEmail: String!) @auth(level: NO_ACCESS) {
+  employmentLinks(
+    where: { personEmail: { eq: $personEmail }, isCurrent: { eq: true } }
+    orderBy: { id: DESC }
+    limit: 1
+  ) {
+    id
+    personEmail
+    userId
+    employeeId
+    companyId
+    jobTitle
+    department
+    startedAt
+    leftAt
+    isCurrent
+    source
+    createdAt
+  }
+}
+
+# ============ NOTIFICATIONS ============
+
+query ListNotificationsByUser($userId: UUID!, $limit: Int!) @auth(level: NO_ACCESS) {
+  notifications(where: { userId: { eq: $userId } }, orderBy: { createdAt: DESC }, limit: $limit) {
+    id
+    userId
+    type
+    title
+    message
+    isRead
+    link
+    metadata
+    readAt
+    createdAt
+  }
+}
+
+query ListUnreadNotificationsByUser($userId: UUID!, $limit: Int!) @auth(level: NO_ACCESS) {
+  notifications(
+    where: { userId: { eq: $userId }, isRead: { eq: false } }
+    orderBy: { createdAt: DESC }
+    limit: $limit
+  ) {
+    id
+    userId
+    type
+    title
+    message
+    isRead
+    link
+    metadata
+    readAt
+    createdAt
+  }
+}
+
+query GetNotificationById($id: UUID!) @auth(level: NO_ACCESS) {
+  notification(id: $id) {
+    id
+    userId
+    type
+    title
+    message
+    isRead
+    link
+    metadata
+    readAt
+    createdAt
+  }
+}
+
+query CountUnreadNotifications($userId: UUID!) @auth(level: NO_ACCESS) {
+  notifications(where: { userId: { eq: $userId }, isRead: { eq: false } }) {
+    id
+  }
+}
+
+# ============ AUDIT LOGS ============
+
+query ListAuditLogs(
+  $action: String
+  $role: String
+  $entityType: String
+  $userId: UUID
+  $dateFrom: Timestamp
+  $dateTo: Timestamp
+  $limit: Int
+  $offset: Int
+) @auth(level: NO_ACCESS) {
+  auditLogs(
+    where: {
+      action: { eq: $action }
+      role: { eq: $role }
+      entityType: { eq: $entityType }
+      userId: { eq: $userId }
+      createdAt: { ge: $dateFrom, le: $dateTo }
+    }
+    orderBy: { createdAt: DESC }
+    limit: $limit
+    offset: $offset
+  ) {
+    id
+    userId
+    role
+    action
+    entityType
+    entityId
+    details
+    ipAddress
+    userAgent
+    createdAt
+    user {
+      id
+      fullName
+      email
+    }
+  }
+}
+
+query CountAuditLogs(
+  $action: String
+  $role: String
+  $entityType: String
+  $userId: UUID
+  $dateFrom: Timestamp
+  $dateTo: Timestamp
+) @auth(level: NO_ACCESS) {
+  auditLogs(
+    where: {
+      action: { eq: $action }
+      role: { eq: $role }
+      entityType: { eq: $entityType }
+      userId: { eq: $userId }
+      createdAt: { ge: $dateFrom, le: $dateTo }
+    }
+  ) {
+    id
+  }
+}
+
+# ============ INTERNAL PROJECTS ============
+
+query ListInternalProjectsByCompany($companyId: UUID!) @auth(level: NO_ACCESS) {
+  internalProjects(
+    where: { companyId: { eq: $companyId }, deletedAt: { isNull: true } }
+    orderBy: { createdAt: DESC }
+  ) {
+    id
+    companyId
+    name
+    description
+    department
+    clientName
+    startDate
+    endDate
+    priority
+    status
+    projectLead
+    requiredRoles
+    openPositions
+    filledPositions
+    tasksCompleted
+    tasksRemaining
+    progress
+    assignedRecruiters
+    assignedEmployees
+    documents
+    createdById
+    createdAt
+    updatedAt
+    deletedAt
+  }
+}
+
+query GetInternalProjectById($id: UUID!, $companyId: UUID!) @auth(level: NO_ACCESS) {
+  internalProject(id: $id) {
+    id
+    companyId
+    name
+    description
+    department
+    clientName
+    startDate
+    endDate
+    priority
+    status
+    projectLead
+    requiredRoles
+    openPositions
+    filledPositions
+    tasksCompleted
+    tasksRemaining
+    progress
+    assignedRecruiters
+    assignedEmployees
+    documents
+    createdById
+    createdAt
+    updatedAt
+    deletedAt
+  }
+}
+
+# ============ INVITATIONS ============
+
+query GetInvitationByToken($tokenHash: String!, $now: Timestamp!) @auth(level: NO_ACCESS) {
+  employeeInvitations(
+    where: { tokenHash: { eq: $tokenHash }, status: { eq: "pending" }, expiresAt: { gt: $now } }
+    limit: 1
+  ) {
+    id
+    companyId
+    email
+    tokenHash
+    firstName
+    lastName
+    jobTitle
+    department
+    status
+    invitedById
+    expiresAt
+    acceptedAt
+    createdAt
+  }
+}
+
+query CheckPendingInvitation($companyId: UUID!, $email: String!, $now: Timestamp!) @auth(level: NO_ACCESS) {
+  employeeInvitations(
+    where: { companyId: { eq: $companyId }, email: { eq: $email }, status: { eq: "pending" }, expiresAt: { gt: $now } }
+    limit: 1
+  ) {
+    id
+  }
+}
+
+# ============ SAVED CANDIDATES ============
+
+query GetSavedCandidate($recruiterId: UUID!, $employeeId: UUID!) @auth(level: NO_ACCESS) {
+  savedCandidates(
+    where: { recruiterId: { eq: $recruiterId }, employeeId: { eq: $employeeId } }
+    limit: 1
+  ) {
+    _id
+    recruiterId
+    employeeId
+    notes
+    savedAt
+    createdAt
+  }
+}
+
+query ListSavedCandidatesByRecruiter($recruiterId: UUID!) @auth(level: NO_ACCESS) {
+  savedCandidates(
+    where: { recruiterId: { eq: $recruiterId } }
+    orderBy: { savedAt: DESC }
+  ) {
+    _id
+    recruiterId
+    employeeId
+    notes
+    savedAt
+    createdAt
+    employee {
+      id
+      firstName
+      lastName
+      jobTitle
+      location
+      email
+    }
+  }
+}
+
+# ============ CONTROLLER-LEVEL AGGREGATIONS ============
+
+query CompanyEmployeeStats($companyId: UUID!) @auth(level: NO_ACCESS) {
+  employees(where: { companyId: { eq: $companyId }, deletedAt: { isNull: true } }) {
+    id
+    employmentStatus
+    isVerified
+    department
+  }
+}
+
+query CompanySkillDistribution($companyId: UUID!) @auth(level: NO_ACCESS) {
+  employeeSkills(where: { employeeId: { eq: $companyId } }, limit: 100) {
+    id
+    skillId
+  }
+}
+
+query AdminDashboardStats @auth(level: NO_ACCESS) {
+  companies(where: { deletedAt: { isNull: true } }) {
+    id
+    status
+    industry
+    createdAt
+  }
+  employees(where: { deletedAt: { isNull: true } }) {
+    id
+    employmentStatus
+  }
+  users(where: { deletedAt: { isNull: true } }) {
+    id
+    role
+  }
+  publicProfiles(where: { isPublic: { eq: true } }) {
+    id
+  }
+}
+
+query FindPlatformAdmins @auth(level: NO_ACCESS) {
+  users(where: { role: { eq: "platform_admin" }, isActive: { eq: true }, deletedAt: { isNull: true } }) {
+    id
+  }
+}
+
+query AdminListCompanies($status: String) @auth(level: NO_ACCESS) {
+  companies(where: { deletedAt: { isNull: true }, status: { eq: $status } }, orderBy: { createdAt: DESC }) {
+    id
+    name
+    email
+    phone
+    website
+    industry
+    size
+    country
+    city
+    description
+    status
+    isVerified
+    createdAt
+    admin {
+      id
+      fullName
+      email
+    }
+  }
+}
+
+query AllOpportunityStatuses @auth(level: NO_ACCESS) {
+  jobOpportunities {
+    id
+    status
+  }
+}
+
+query TopSkills($limit: Int!) @auth(level: NO_ACCESS) {
+  employeeSkills(limit: $limit) {
+    id
+    skillId
+  }
+}
